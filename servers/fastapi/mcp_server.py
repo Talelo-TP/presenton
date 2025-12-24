@@ -31,7 +31,7 @@ async def main():
         print(f"DEBUG: Parsed args - port={args.port}")
 
         # Create an HTTP client that the MCP server will use to call the API
-        api_client = httpx.AsyncClient(base_url="http://127.0.0.1:8000", timeout=60.0)
+        api_client = httpx.AsyncClient(base_url="http://0.0.0.0:8000", timeout=60.0)
 
         # Build MCP server from OpenAPI
         print("DEBUG: Creating FastMCP server from OpenAPI spec...")
@@ -44,10 +44,10 @@ async def main():
 
         # Start the MCP server
         uvicorn_config = {"reload": True}
-        print(f"DEBUG: Starting MCP server on host=127.0.0.1, port={args.port}")
+        print(f"DEBUG: Starting MCP server on host=0.0.0.0, port={args.port}")
         await mcp.run_async(
             transport="http",
-            host="127.0.0.1",
+            host="0.0.0.0",
             port=args.port,
             uvicorn_config=uvicorn_config,
         )
