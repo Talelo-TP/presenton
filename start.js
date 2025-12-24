@@ -150,7 +150,7 @@ const startServers = async () => {
       isDev ? "dev" : "start",
       "--",
       "-H",
-      "127.0.0.1",
+      "0.0.0.0",
       "-p",
       nextjsPort.toString(),
     ],
