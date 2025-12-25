@@ -1,13 +1,15 @@
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const fastapiDir = join(__dirname, "servers/fastapi");
 const nextjsDir = join(__dirname, "servers/nextjs");
+
+const publicPort = process.env.PORT || "8080";
 
 const appDataDirectory = process.env.APP_DATA_DIRECTORY || "/tmp/app_data";
 process.env.APP_DATA_DIRECTORY = appDataDirectory;
@@ -61,6 +63,16 @@ const startServices = async () => {
   await new Promise(resolve => setTimeout(resolve, 15000));
 
   console.log("📡 Starting Nginx Gateway...");
+  try {
+    const nginxTemplatePath = join(__dirname, "nginx.conf");
+    if (existsSync(nginxTemplatePath)) {
+      const nginxTemplate = readFileSync(nginxTemplatePath, "utf-8");
+      const rendered = nginxTemplate.replace(/\blisten\s+\d+;/, `listen ${publicPort};`);
+      writeFileSync("/etc/nginx/nginx.conf", rendered);
+    }
+  } catch (err) {
+    console.error("Failed to render nginx.conf:", err);
+  }
   const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
     stdio: "inherit"
   });
