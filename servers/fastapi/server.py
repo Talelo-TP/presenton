@@ -10,12 +10,14 @@ if __name__ == "__main__":
         "--reload", type=str, default="false", help="Reload the server on code changes"
     )
     args = parser.parse_args()
-    reload = args.reload == "true"
+    reload_mode = args.reload.lower() == "true"
+    
+    print(f"Starting FastAPI on 0.0.0.0:{args.port}")
     
     uvicorn.run(
         "api.main:app",
         host="0.0.0.0",
         port=args.port,
         log_level="info",
-        reload=reload,
+        reload=reload_mode,
     )
