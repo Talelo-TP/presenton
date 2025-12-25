@@ -1,5 +1,6 @@
 import uvicorn
 import argparse
+import os
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the FastAPI server")
@@ -12,11 +13,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     reload_mode = args.reload.lower() == "true"
     
-    print(f"Starting FastAPI on 0.0.0.0:{args.port}")
-    
+    # Force 0.0.0.0 to ensure visibility inside the container
+    host = os.getenv("HOST", "0.0.0.0")
+
+    print(f"Starting FastAPI on {host}:{args.port}")
+
     uvicorn.run(
         "api.main:app",
-        host="0.0.0.0",
+        host=host,
         port=args.port,
         log_level="info",
         reload=reload_mode,
