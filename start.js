@@ -62,6 +62,44 @@ writeFileSync(userConfigPath, JSON.stringify({
 const startServices = async () => {
   console.log("🚀 Starting Presenton Backend...");
 
+  const bootstrapNginxConfig = `user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+error_log /var/log/nginx/error.log info;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include /etc/nginx/mime.types;
+  default_type text/plain;
+
+  server {
+    listen ${publicPort};
+    server_name _;
+
+    location /healthz {
+      return 200 'ok';
+    }
+
+    location / {
+      return 200 'starting';
+    }
+  }
+}
+`;
+
+  try {
+    writeFileSync("/etc/nginx/nginx.conf", bootstrapNginxConfig);
+  } catch (err) {
+    console.error("Failed to write bootstrap nginx.conf:", err);
+  }
+
+  const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
+    stdio: "inherit",
+  });
+
   const venvPython = existsSync(join(fastapiDir, ".venv", "bin", "python"))
     ? join(fastapiDir, ".venv", "bin", "python")
     : "python3";
@@ -98,13 +136,11 @@ const startServices = async () => {
       const nginxTemplate = readFileSync(nginxTemplatePath, "utf-8");
       const rendered = nginxTemplate.replace(/\blisten\s+\d+;/, `listen ${publicPort};`);
       writeFileSync("/etc/nginx/nginx.conf", rendered);
+      spawn("nginx", ["-s", "reload"], { stdio: "inherit" });
     }
   } catch (err) {
     console.error("Failed to render nginx.conf:", err);
   }
-  const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
-    stdio: "inherit"
-  });
 
   // Keep process alive
   fastApiProcess.on("exit", (code) => {
