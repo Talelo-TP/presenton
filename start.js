@@ -1,4 +1,4 @@
-/* Optimized Presenton Orchestrator for Cloud Run */
+/* start.js - Final Production Version */
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
@@ -10,105 +10,63 @@ const __dirname = dirname(__filename);
 const fastapiDir = join(__dirname, "servers/fastapi");
 const nextjsDir = join(__dirname, "servers/nextjs");
 
-// Internal ports (Not exposed publicly, only to Nginx)
-const fastapiPort = 8000;
-const nextjsPort = 3000;
-const appmcpPort = 8001;
+const args = process.argv.slice(2);
 
-// Setup App Data Directory (Cloud Run uses /tmp usually)
+// Ensure App Data exists
 const userConfigPath = join(process.env.APP_DATA_DIRECTORY || "/tmp", "userConfig.json");
 const userDataDir = dirname(userConfigPath);
+if (!existsSync(userDataDir)) mkdirSync(userDataDir, { recursive: true });
 
-if (!existsSync(userDataDir)) {
-  mkdirSync(userDataDir, { recursive: true });
-}
-
-process.env.USER_CONFIG_PATH = userConfigPath;
-
-const setupUserConfigFromEnv = () => {
-  let existingConfig = {};
-  if (existsSync(userConfigPath)) {
-    try {
-      existingConfig = JSON.parse(readFileSync(userConfigPath, "utf8"));
-    } catch (e) {
-      existingConfig = {};
-    }
-  }
-
-  // Force Google config as requested
-  const userConfig = {
-    LLM: process.env.LLM || "google",
-    GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || existingConfig.GOOGLE_API_KEY,
-    GOOGLE_MODEL: process.env.GOOGLE_MODEL || "gemini-1.5-pro",
-    PEXELS_API_KEY: process.env.PEXELS_API_KEY || existingConfig.PEXELS_API_KEY,
-    IMAGE_PROVIDER: process.env.IMAGE_PROVIDER || "pexels",
-    CAN_CHANGE_KEYS: "false"
-  };
-
-  writeFileSync(userConfigPath, JSON.stringify(userConfig));
-};
+// Minimal Config
+writeFileSync(userConfigPath, JSON.stringify({
+  LLM: "google",
+  GOOGLE_MODEL: "gemini-1.5-pro",
+  IMAGE_PROVIDER: "pexels"
+}));
 
 const startServers = async () => {
   console.log("🚀 Starting Presenton Services...");
 
-  // 1. Start FastAPI (Backend) - Using python3
-  const fastApiProcess = spawn(
-    "python3",
-    ["server.py", "--port", fastapiPort.toString(), "--reload", "false"],
-    {
-      cwd: fastapiDir,
-      stdio: "inherit",
-      env: { ...process.env, HOST: "0.0.0.0" },
-    }
-  );
-
-  // 2. Start MCP Server - Using python3
-  const appmcpProcess = spawn(
-    "python3",
-    ["mcp_server.py", "--port", appmcpPort.toString()],
-    {
-      cwd: fastapiDir,
-      stdio: "inherit",
-      env: process.env,
-    }
-  );
-
-  // 3. Start Next.js (Frontend)
-  const nextjsProcess = spawn(
-    "npm",
-    ["run", "start", "--", "-H", "0.0.0.0", "-p", nextjsPort.toString()],
-    {
-      cwd: nextjsDir,
-      stdio: "inherit",
-      env: process.env,
-    }
-  );
-
-  // 4. Start Nginx (The Router)
-  console.log("📡 Starting Nginx on Port 8080...");
-  const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
+  // 1. FastAPI (Port 8000)
+  const fastApiProcess = spawn("python3", ["server.py", "--port", "8000", "--reload", "false"], {
+    cwd: fastapiDir,
     stdio: "inherit",
-    env: process.env,
+    // CRITICAL: Bind to 0.0.0.0 so 127.0.0.1 works
+    env: { ...process.env, HOST: "0.0.0.0" } 
   });
 
-  // Log failures
-  fastApiProcess.on("error", (err) => console.error("❌ FastAPI failed:", err));
-  nextjsProcess.on("error", (err) => console.error("❌ Next.js failed:", err));
-  nginxProcess.on("error", (err) => console.error("❌ Nginx failed:", err));
+  // 2. MCP Server (Port 8001)
+  const appmcpProcess = spawn("python3", ["mcp_server.py", "--port", "8001"], {
+    cwd: fastapiDir,
+    stdio: "inherit",
+    env: process.env
+  });
+
+  // 3. Next.js (Port 3000)
+  const nextjsProcess = spawn("npm", ["run", "start", "--", "-H", "0.0.0.0", "-p", "3000"], {
+    cwd: nextjsDir,
+    stdio: "inherit",
+    env: process.env
+  });
+
+  // 4. Nginx (Port 8080)
+  console.log("📡 Starting Nginx (Listening on 8080)...");
+  const nginxProcess = spawn("nginx", ["-g", "daemon off;"], {
+    stdio: "inherit",
+    env: process.env
+  });
+
+  // Error Handlers
+  fastApiProcess.on("error", (e) => console.error("❌ FastAPI Error:", e));
+  nextjsProcess.on("error", (e) => console.error("❌ NextJS Error:", e));
+  nginxProcess.on("error", (e) => console.error("❌ Nginx Error:", e));
 
   const exitCode = await Promise.race([
-    new Promise((resolve) => fastApiProcess.on("exit", resolve)),
-    new Promise((resolve) => nextjsProcess.on("exit", resolve)),
-    new Promise((resolve) => nginxProcess.on("exit", resolve)),
+    new Promise(r => fastApiProcess.on("exit", r)),
+    new Promise(r => nginxProcess.on("exit", r)),
   ]);
 
-  console.log(`Process exited with code: ${exitCode}`);
   process.exit(exitCode);
 };
 
-const main = async () => {
-  setupUserConfigFromEnv();
-  startServers();
-};
-
-main();
+startServers();
