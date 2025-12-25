@@ -9,31 +9,42 @@ const __dirname = dirname(__filename);
 const fastapiDir = join(__dirname, "servers/fastapi");
 const nextjsDir = join(__dirname, "servers/nextjs");
 
+const appDataDirectory = process.env.APP_DATA_DIRECTORY || "/tmp/app_data";
+process.env.APP_DATA_DIRECTORY = appDataDirectory;
+process.env.USER_CONFIG_PATH =
+  process.env.USER_CONFIG_PATH || join(appDataDirectory, "userConfig.json");
+process.env.TEMP_DIRECTORY = process.env.TEMP_DIRECTORY || "/tmp/presenton";
+process.env.CAN_CHANGE_KEYS = process.env.CAN_CHANGE_KEYS || "false";
+
 // Set up App Data for Cloud Run /tmp
-const userConfigPath = join(process.env.APP_DATA_DIRECTORY || "/tmp", "userConfig.json");
+const userConfigPath = process.env.USER_CONFIG_PATH;
 const userDataDir = dirname(userConfigPath);
 if (!existsSync(userDataDir)) mkdirSync(userDataDir, { recursive: true });
 
 // Pre-fill config so frontend doesn't hang on setup
 writeFileSync(userConfigPath, JSON.stringify({
-  LLM: "google",
-  GOOGLE_MODEL: "gemini-1.5-pro",
-  IMAGE_PROVIDER: "pexels",
-  CAN_CHANGE_KEYS: "false"
+  LLM: process.env.LLM || "google",
+  GOOGLE_MODEL: process.env.GOOGLE_MODEL || "models/gemini-2.5-flash",
+  IMAGE_PROVIDER: process.env.IMAGE_PROVIDER || "gemini_flash",
+  CAN_CHANGE_KEYS: process.env.CAN_CHANGE_KEYS
 }));
 
 const startServices = async () => {
   console.log("🚀 Starting Presenton Backend...");
 
+  const venvPython = existsSync(join(fastapiDir, ".venv", "bin", "python"))
+    ? join(fastapiDir, ".venv", "bin", "python")
+    : "python3";
+
   // 1. Start FastAPI
-  const fastApiProcess = spawn("python3", ["server.py", "--port", "8000"], {
+  const fastApiProcess = spawn(venvPython, ["server.py", "--port", "8000"], {
     cwd: fastapiDir,
     stdio: "inherit",
     env: { ...process.env, HOST: "127.0.0.1" }
   });
 
   // 2. Start MCP
-  spawn("python3", ["mcp_server.py", "--port", "8001"], {
+  spawn(venvPython, ["mcp_server.py", "--port", "8001"], {
     cwd: fastapiDir,
     stdio: "inherit"
   });
