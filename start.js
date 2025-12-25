@@ -111,6 +111,16 @@ http {
     env: { ...process.env, HOST: "127.0.0.1" }
   });
 
+  fastApiProcess.on("error", (err) => {
+    console.error("Failed to start FastAPI process:", err);
+    process.exit(1);
+  });
+
+  fastApiProcess.on("exit", (code) => {
+    console.error(`FastAPI exited with code ${code}`);
+    process.exit(code ?? 1);
+  });
+
   // 2. Start MCP
   spawn(venvPython, ["mcp_server.py", "--port", "8001"], {
     cwd: fastapiDir,
@@ -122,6 +132,16 @@ http {
   const nextjsProcess = spawn("npm", ["run", "start", "--", "-p", "3000", "-H", "127.0.0.1"], {
     cwd: nextjsDir,
     stdio: "inherit"
+  });
+
+  nextjsProcess.on("error", (err) => {
+    console.error("Failed to start Next.js process:", err);
+    process.exit(1);
+  });
+
+  nextjsProcess.on("exit", (code) => {
+    console.error(`Next.js exited with code ${code}`);
+    process.exit(code ?? 1);
   });
 
   // 4. Switch Nginx to real app as soon as Next.js is reachable.
@@ -146,11 +166,6 @@ http {
     .catch((err) => console.error("FastAPI did not become reachable:", err));
 
   // Keep process alive
-  fastApiProcess.on("exit", (code) => {
-    console.error(`FastAPI exited with code ${code}`);
-    process.exit(code);
-  });
-  
   nginxProcess.on("exit", (code) => {
     console.error(`Nginx exited with code ${code}`);
     process.exit(code);
