@@ -124,9 +124,8 @@ http {
     stdio: "inherit"
   });
 
-  // 4. Wait for apps to actually open their ports (cold starts can be slow)
-  console.log("⏳ Waiting for FastAPI (127.0.0.1:8000) and Next.js (127.0.0.1:3000)...");
-  await waitForPort("127.0.0.1", 8000, 5 * 60 * 1000);
+  // 4. Switch Nginx to real app as soon as Next.js is reachable.
+  console.log("⏳ Waiting for Next.js (127.0.0.1:3000)...");
   await waitForPort("127.0.0.1", 3000, 5 * 60 * 1000);
 
   console.log("📡 Starting Nginx Gateway...");
@@ -141,6 +140,10 @@ http {
   } catch (err) {
     console.error("Failed to render nginx.conf:", err);
   }
+
+  waitForPort("127.0.0.1", 8000, 15 * 60 * 1000)
+    .then(() => console.log("✅ FastAPI port is reachable (127.0.0.1:8000)"))
+    .catch((err) => console.error("FastAPI did not become reachable:", err));
 
   // Keep process alive
   fastApiProcess.on("exit", (code) => {
