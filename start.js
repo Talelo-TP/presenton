@@ -2,6 +2,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import net from "net";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -10,6 +11,33 @@ const fastapiDir = join(__dirname, "servers/fastapi");
 const nextjsDir = join(__dirname, "servers/nextjs");
 
 const publicPort = process.env.PORT || "8080";
+
+const waitForPort = (host, port, timeoutMs) => {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    const tryOnce = () => {
+      const socket = new net.Socket();
+      const onError = () => {
+        socket.destroy();
+        if (Date.now() - start >= timeoutMs) {
+          reject(new Error(`Timed out waiting for ${host}:${port}`));
+          return;
+        }
+        setTimeout(tryOnce, 500);
+      };
+
+      socket.setTimeout(1000);
+      socket.once("error", onError);
+      socket.once("timeout", onError);
+      socket.connect(port, host, () => {
+        socket.end();
+        resolve(true);
+      });
+    };
+
+    tryOnce();
+  });
+};
 
 const appDataDirectory = process.env.APP_DATA_DIRECTORY || "/tmp/app_data";
 process.env.APP_DATA_DIRECTORY = appDataDirectory;
@@ -58,9 +86,10 @@ const startServices = async () => {
     stdio: "inherit"
   });
 
-  // 4. THE FIX: Wait for apps to actually open their ports
-  console.log("⏳ Staggering Nginx startup (15s) to prevent 502...");
-  await new Promise(resolve => setTimeout(resolve, 15000));
+  // 4. Wait for apps to actually open their ports (cold starts can be slow)
+  console.log("⏳ Waiting for FastAPI (127.0.0.1:8000) and Next.js (127.0.0.1:3000)...");
+  await waitForPort("127.0.0.1", 8000, 5 * 60 * 1000);
+  await waitForPort("127.0.0.1", 3000, 5 * 60 * 1000);
 
   console.log("📡 Starting Nginx Gateway...");
   try {
