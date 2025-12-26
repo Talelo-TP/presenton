@@ -46,6 +46,17 @@ process.env.USER_CONFIG_PATH =
 process.env.TEMP_DIRECTORY = process.env.TEMP_DIRECTORY || "/tmp/presenton";
 process.env.CAN_CHANGE_KEYS = process.env.CAN_CHANGE_KEYS || "false";
 
+console.log("Runtime config:", {
+  PORT: process.env.PORT,
+  APP_DATA_DIRECTORY: process.env.APP_DATA_DIRECTORY,
+  USER_CONFIG_PATH: process.env.USER_CONFIG_PATH,
+  TEMP_DIRECTORY: process.env.TEMP_DIRECTORY,
+  CAN_CHANGE_KEYS: process.env.CAN_CHANGE_KEYS,
+  LLM: process.env.LLM,
+  GOOGLE_MODEL: process.env.GOOGLE_MODEL,
+  IMAGE_PROVIDER: process.env.IMAGE_PROVIDER,
+});
+
 // Set up App Data for Cloud Run /tmp
 const userConfigPath = process.env.USER_CONFIG_PATH;
 const userDataDir = dirname(userConfigPath);
@@ -161,9 +172,18 @@ http {
     console.error("Failed to render nginx.conf:", err);
   }
 
-  waitForPort("127.0.0.1", 8000, 15 * 60 * 1000)
-    .then(() => console.log("✅ FastAPI port is reachable (127.0.0.1:8000)"))
-    .catch((err) => console.error("FastAPI did not become reachable:", err));
+  const fastapiTimeoutMs = Number.parseInt(
+    process.env.FASTAPI_STARTUP_TIMEOUT_MS || "120000",
+    10
+  );
+  console.log(`⏳ Waiting for FastAPI (127.0.0.1:8000) up to ${fastapiTimeoutMs}ms...`);
+  try {
+    await waitForPort("127.0.0.1", 8000, fastapiTimeoutMs);
+    console.log("✅ FastAPI port is reachable (127.0.0.1:8000)");
+  } catch (err) {
+    console.error("FastAPI did not become reachable:", err);
+    process.exit(1);
+  }
 
   // Keep process alive
   nginxProcess.on("exit", (code) => {

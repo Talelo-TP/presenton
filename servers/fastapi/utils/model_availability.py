@@ -1,3 +1,5 @@
+import os
+
 from constants.supported_ollama_models import SUPPORTED_OLLAMA_MODELS
 from constants.llm import OPENAI_URL
 from enums.image_provider import ImageProvider
@@ -58,12 +60,21 @@ async def check_llm_and_image_provider_api_or_model_availability():
             if not google_api_key:
                 raise Exception("GOOGLE_API_KEY must be provided")
             google_model = get_google_model_env()
+            if google_model and not google_model.startswith("models/"):
+                google_model = "models/" + google_model
             if google_model:
-                available_models = await list_available_google_models(google_api_key)
-                if google_model not in available_models:
+                strict_checks = (os.getenv("STARTUP_STRICT_MODEL_CHECKS") or "false").lower() == "true"
+                try:
+                    available_models = await list_available_google_models(google_api_key)
+                    if google_model not in available_models:
+                        print("-" * 50)
+                        print("Available models: ", available_models)
+                        raise Exception(f"Model {google_model} is not available")
+                except Exception as e:
                     print("-" * 50)
-                    print("Available models: ", available_models)
-                    raise Exception(f"Model {google_model} is not available")
+                    print("Google model availability check failed:", str(e))
+                    if strict_checks:
+                        raise
 
         elif get_llm_provider() == LLMProvider.ANTHROPIC:
             anthropic_api_key = get_anthropic_api_key_env()

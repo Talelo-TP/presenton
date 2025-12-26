@@ -1,3 +1,6 @@
+import asyncio
+import os
+
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 from google import genai
@@ -18,4 +21,9 @@ async def list_available_anthropic_models(api_key: str) -> list[str]:
 
 async def list_available_google_models(api_key: str) -> list[str]:
     client = genai.Client(api_key=api_key)
-    return list(map(lambda x: x.name, client.models.list(config={"page_size": 50})))
+    timeout_s = float(os.getenv("GOOGLE_MODEL_LIST_TIMEOUT_S") or "10")
+
+    def _list_models_sync() -> list[str]:
+        return list(map(lambda x: x.name, client.models.list(config={"page_size": 50})))
+
+    return await asyncio.wait_for(asyncio.to_thread(_list_models_sync), timeout=timeout_s)
