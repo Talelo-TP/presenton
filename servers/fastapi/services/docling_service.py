@@ -1,15 +1,14 @@
-from docling.document_converter import (
-    DocumentConverter,
-    PdfFormatOption,
-    PowerpointFormatOption,
-    WordFormatOption,
-)
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.datamodel.base_models import InputFormat
-
-
 class DoclingService:
     def __init__(self):
+        from docling.document_converter import (
+            DocumentConverter,
+            PdfFormatOption,
+            PowerpointFormatOption,
+            WordFormatOption,
+        )
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.datamodel.base_models import InputFormat
+
         self.pipeline_options = PdfPipelineOptions()
         self.pipeline_options.do_ocr = False
 

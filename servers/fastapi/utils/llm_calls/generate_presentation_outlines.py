@@ -3,7 +3,6 @@ from typing import Optional
 
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from models.llm_tools import SearchWebTool
-from services.llm_client import LLMClient
 from utils.get_dynamic_models import get_presentation_outline_model_with_n_slides
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_provider import get_model
@@ -95,6 +94,8 @@ async def generate_ppt_outline(
 ):
     model = get_model()
     response_model = get_presentation_outline_model_with_n_slides(n_slides)
+
+    from services.llm_client import LLMClient
 
     client = LLMClient()
 

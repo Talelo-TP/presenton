@@ -2,7 +2,6 @@ from models.llm_message import LLMSystemMessage, LLMUserMessage
 from models.presentation_layout import PresentationLayoutModel, SlideLayoutModel
 from models.slide_layout_index import SlideLayoutIndex
 from models.sql.slide import SlideModel
-from services.llm_client import LLMClient
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_provider import get_model
 
@@ -41,6 +40,8 @@ async def get_slide_layout_from_prompt(
     layout: PresentationLayoutModel,
     slide: SlideModel,
 ) -> SlideLayoutModel:
+
+    from services.llm_client import LLMClient
 
     client = LLMClient()
     model = get_model()

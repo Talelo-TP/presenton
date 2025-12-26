@@ -1,6 +1,5 @@
 from typing import Optional
 from models.llm_message import LLMSystemMessage, LLMUserMessage
-from services.llm_client import LLMClient
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_provider import get_model
 
@@ -49,6 +48,8 @@ def get_user_prompt(prompt: str, html: str):
 
 async def get_edited_slide_html(prompt: str, html: str):
     model = get_model()
+
+    from services.llm_client import LLMClient
 
     client = LLMClient()
     try:

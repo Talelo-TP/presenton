@@ -1,6 +1,10 @@
-from typing import Any, List, Literal, Optional
+from typing import Any, List, Literal, Optional, TYPE_CHECKING
 from pydantic import BaseModel
-from google.genai.types import Content as GoogleContent
+
+if TYPE_CHECKING:
+    from google.genai.types import Content as GoogleContent
+else:
+    GoogleContent = Any
 
 from models.llm_tool_call import AnthropicToolCall
 

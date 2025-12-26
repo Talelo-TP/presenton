@@ -3,7 +3,6 @@ from typing import Optional
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from models.presentation_layout import SlideLayoutModel
 from models.sql.slide import SlideModel
-from services.llm_client import LLMClient
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_provider import get_model
 from utils.schema_utils import add_field_in_schema, remove_fields_from_schema
@@ -102,6 +101,8 @@ async def get_edited_slide_content(
         },
         True,
     )
+
+    from services.llm_client import LLMClient
 
     client = LLMClient()
     try:

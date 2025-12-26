@@ -4,8 +4,6 @@ import json
 import os
 import aiohttp
 from fastapi import HTTPException
-from google import genai
-from openai import NOT_GIVEN, AsyncOpenAI
 from models.image_prompt import ImagePrompt
 from models.sql.image_asset import ImageAsset
 from utils.get_env import (
@@ -107,6 +105,8 @@ class ImageGenerationService:
     async def generate_image_openai(
         self, prompt: str, output_directory: str, model: str, quality: str
     ) -> str:
+        from openai import NOT_GIVEN, AsyncOpenAI
+
         client = AsyncOpenAI()
         result = await client.images.generate(
             model=model,
@@ -145,6 +145,8 @@ class ImageGenerationService:
         self, prompt: str, output_directory: str, model: str
     ) -> str:
         """Base method for Google image generation models."""
+        from google import genai
+
         client = genai.Client()
         response = await asyncio.to_thread(
             client.models.generate_content,

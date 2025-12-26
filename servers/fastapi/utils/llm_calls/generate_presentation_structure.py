@@ -2,7 +2,6 @@ from typing import Optional
 from models.llm_message import LLMSystemMessage, LLMUserMessage
 from models.presentation_layout import PresentationLayoutModel
 from models.presentation_outline_model import PresentationOutlineModel
-from services.llm_client import LLMClient
 from utils.llm_client_error_handler import handle_llm_client_exceptions
 from utils.llm_provider import get_model
 from utils.get_dynamic_models import get_presentation_structure_model_with_n_slides
@@ -101,6 +100,8 @@ async def generate_presentation_structure(
     instructions: Optional[str] = None,
     using_slides_markdown: bool = False,
 ) -> PresentationStructureModel:
+
+    from services.llm_client import LLMClient
 
     client = LLMClient()
     model = get_model()

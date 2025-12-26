@@ -114,17 +114,25 @@ http {
   const venvPython = existsSync(join(fastapiDir, ".venv", "bin", "python"))
     ? join(fastapiDir, ".venv", "bin", "python")
     : "python3";
+  console.log("FastAPI python executable:", venvPython);
 
   // 1. Start FastAPI
   const fastApiProcess = spawn(venvPython, ["server.py", "--port", "8000"], {
     cwd: fastapiDir,
-    stdio: "inherit",
+    stdio: ["ignore", "pipe", "pipe"],
     env: {
       ...process.env,
       HOST: "127.0.0.1",
       PYTHONUNBUFFERED: "1",
       PYTHONFAULTHANDLER: "1",
     }
+  });
+
+  fastApiProcess.stdout?.on("data", (chunk) => {
+    process.stdout.write(`[FASTAPI] ${chunk}`);
+  });
+  fastApiProcess.stderr?.on("data", (chunk) => {
+    process.stderr.write(`[FASTAPI] ${chunk}`);
   });
 
   fastApiProcess.on("error", (err) => {
