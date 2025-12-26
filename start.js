@@ -119,7 +119,12 @@ http {
   const fastApiProcess = spawn(venvPython, ["server.py", "--port", "8000"], {
     cwd: fastapiDir,
     stdio: "inherit",
-    env: { ...process.env, HOST: "127.0.0.1" }
+    env: {
+      ...process.env,
+      HOST: "127.0.0.1",
+      PYTHONUNBUFFERED: "1",
+      PYTHONFAULTHANDLER: "1",
+    }
   });
 
   fastApiProcess.on("error", (err) => {
